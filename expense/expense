@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+
+let { Client } = require('pg');
+let client = new Client({ 
+  database: 'expenses'
+});
+
+async function logQuery(queryText) {
+  await client.connect();
+
+  let data = await client.query(queryText);
+
+  data.rows.forEach(row => {
+    let columns = [
+      row.id.toString().padStart(3),
+      row.created_on.toDateString().padStart(10),
+      row.amount.padStart(12),
+      row.memo
+    ];
+
+    console.log(columns.join(' | '));
+  });
+
+  client.end();
+}
+
+logQuery('SELECT * FROM expenses ORDER BY age(created_on) DESC');
+

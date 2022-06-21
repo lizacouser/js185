@@ -12,8 +12,21 @@ const compareByTitle = (itemA, itemB) => {
   }
 };
 
+// Return a list of todo lists sorted by their completion status and title
+// (case-sensitive). The uncompleted and completed todo lists must be passed
+// to the method via the `undone` and `done` arguments.
+const sortItems = (undone, done) => {
+  undone.sort(compareByTitle);
+  done.sort(compareByTitle);
+  return [].concat(undone, done);
+}
+
 module.exports = {
-  // // return the list of todo lists sorted by completion status and title.
+  sortTodoLists: sortItems,
+  sortTodos: sortItems,
+};
+
+// // return the list of todo lists sorted by completion status and title.
   // sortTodoLists(todoLists) {
   //   let undone = todoLists.filter(todoList => !todoList.isDone());
   //   let done = todoLists.filter(todoList => todoList.isDone());
@@ -23,22 +36,12 @@ module.exports = {
   // },
   
 
-  // Return a list of todo lists sorted by their completion status and title
-  // (case-sensitive). The uncompleted and completed todo lists must be passed
-  // to the method via the `undone` and `done` arguments.
-  sortTodoLists(undone, done) {
-    undone.sort(compareByTitle);
-    done.sort(compareByTitle);
-    return [].concat(undone, done);
-  },
-
   // return the list of todos in the todo list sorted by completion status and
   // title.
-  sortTodos(todoList) {
-    let undone = todoList.todos.filter(todo => !todo.isDone());
-    let done = todoList.todos.filter(todo => todo.isDone());
-    undone.sort(compareByTitle);
-    done.sort(compareByTitle);
-    return [].concat(undone, done);
-  },
-};
+  // sortTodos(todoList) {
+  //   let undone = todoList.todos.filter(todo => !todo.isDone());
+  //   let done = todoList.todos.filter(todo => todo.isDone());
+  //   undone.sort(compareByTitle);
+  //   done.sort(compareByTitle);
+  //   return [].concat(undone, done);
+  // },

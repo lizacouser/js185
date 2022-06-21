@@ -111,6 +111,8 @@ app.get("/lists/:todoListId", (req, res, next) => {
   if (todoList === undefined) {
     next(new Error("Not found."));
   } else {
+    todoList.todos = res.locals.store.sortedTodos(todoList);
+
     res.render("list", {
       todoList,
       hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),

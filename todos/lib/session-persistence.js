@@ -33,4 +33,11 @@ module.exports = class SessionPersistence {
     let done = todoLists.filter(todoList => this.isDoneTodoList(todoList));
     return sortTodoLists(undone, done);
   }
+
+  sortedTodos(todoList) {
+    let todos = todoList.todos;
+    let undone = todos.filter(todo => !todo.done);
+    let done = todos.filter(todo => todo.done);
+    return deepCopy(sortTodos(undone, done));
+  }
 };

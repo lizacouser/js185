@@ -15,6 +15,11 @@ module.exports = class SessionPersistence {
     return todoList.todos.length > 0 && todoList.todos.every(todo => todo.done);
   }
 
+  // Does the todo list have any undone todos? Returns true if yes, false if no.
+  hasUndoneTodos(todoList) {
+    return todoList.todos.some(todo => !todo.done);
+  }
+
   // Find a todo list with the indicated ID. Returns `undefined` if not found.
   // Note that `todoListId` must be numeric.
   loadTodoList = (todoListId) => {

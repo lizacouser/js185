@@ -103,6 +103,22 @@ app.get("/lists", (req, res) => {
   });
 });
 
+// Render individual todo list and its todos
+app.get("/lists/:todoListId", (req, res, next) => {
+  let todoListId = req.params.todoListId;
+  let todoList = res.locals.store.loadTodoList(+todoListId);
+  
+  if (todoList === undefined) {
+    next(new Error("Not found."));
+  } else {
+    res.render("list", {
+      todoList,
+      hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),
+      isDoneTodoList: res.locals.store.isDoneTodoList(todoList),
+    });
+  }
+});
+
 // Render new todo list page
 app.get("/lists/new", (req, res) => {
   res.render("new-list");
@@ -140,21 +156,6 @@ app.post("/lists",
   }
 );
 
-
-// Render individual todo list and its todos
-app.get("/lists/:todoListId", (req, res, next) => {
-  let todoListId = req.params.todoListId;
-  let todoList = res.locals.store.loadTodoList(+todoListId);
-  
-  if (todoList === undefined) {
-    next(new Error("Not found."));
-  } else {
-    res.render("list", {
-      todoList: todoList,
-      todos: sortTodos(todoList),
-    });
-  }
-});
 
 // Toggle completion status of a todo
 app.post("/lists/:todoListId/todos/:todoId/toggle", (req, res, next) => {

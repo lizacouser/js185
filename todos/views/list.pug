@@ -1,11 +1,13 @@
 extends layout
 
+//- todoList.isDone() becomes 
+//- todoList.size() becomes todos.length
 block main
-  section#todos(class=todoList.isDone() ? "done" : "")
+  section#todos(class=isDoneTodoList ? "done" : "")
     header
       h2= todoList.title
       ul
-        if todoList.size() > 0 && !todoList.isDone()
+        if hasUndoneTodos //- if todos.length > 0 && !IsDoneTodoList
           li
             form.complete_all(action=`/lists/${todoList.id}/complete_all`
                               method="post")
@@ -15,11 +17,11 @@ block main
             button.edit(type="submit") Edit List
 
     ul
-      each todo in todos
-        li(class=todo.isDone() ? "done" : "")
+      each todo in todoList.todos
+        li(class=todo.done ? "done" : "")
           form.check(action=`/lists/${todoList.id}/todos/${todo.id}/toggle`
                      method="post")
-            input(type="hidden" name="done" value=!todo.isDone())
+            input(type="hidden" name="done" value=!todo.done)
             button Done
 
           h3= todo.title
@@ -42,3 +44,31 @@ block main
 block headerLinks
   .actions
     a.list(href="/lists") All Lists
+
+
+//- block main
+//-   section#todos(class=todoList.isDone() ? "done" : "")
+//-     header
+//-       h2= todoList.title
+//-       ul
+//-         if todoList.size() > 0 && !todoList.isDone()
+//-           li
+//-             form.complete_all(action=`/lists/${todoList.id}/complete_all`
+//-                               method="post")
+//-               button.check(type="submit") Complete All
+//-         li
+//-           form(action=`/lists/${todoList.id}/edit` method="get")
+//-             button.edit(type="submit") Edit List
+
+//-     ul
+//-       each todo in todos
+//-         li(class=todo.isDone() ? "done" : "")
+//-           form.check(action=`/lists/${todoList.id}/todos/${todo.id}/toggle`
+//-                      method="post")
+//-             input(type="hidden" name="done" value=!todo.isDone())
+//-             button Done
+
+//-           h3= todo.title
+//-           form.delete(action=`/lists/${todoList.id}/todos/${todo.id}/destroy`
+//-                       method="post")
+//-             button Delete

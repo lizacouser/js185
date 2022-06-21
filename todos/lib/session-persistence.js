@@ -22,9 +22,17 @@ module.exports = class SessionPersistence {
 
   // Find a todo list with the indicated ID. Returns `undefined` if not found.
   // Note that `todoListId` must be numeric.
-  loadTodoList = (todoListId) => {
-    let todoLists = deepCopy(this._todoLists);
-    return todoLists.find(todoList => todoList.id === todoListId);
+  loadTodoList(todoListId) {
+    let todoList = this._findTodoList(todoListId);
+    return deepCopy(todoList);
+  }
+
+  // Find a todo with the indicated ID in the indicated todo list. Returns
+  // `undefined` if not found. Note that both `todoListId` and `todoId` must be
+  // numeric.
+  loadTodo(todoListId, todoId) {
+    let todo = this._findTodo(todoListId, todoId);
+    return deepCopy(todo);
   }
 
   sortedTodoLists() {
@@ -39,5 +47,24 @@ module.exports = class SessionPersistence {
     let undone = todos.filter(todo => !todo.done);
     let done = todos.filter(todo => todo.done);
     return deepCopy(sortTodos(undone, done));
+  }
+
+  _findTodoList(todoListId) {
+    return this._todoLists.find(todoList => todoList.id === todoListId);
+  }
+
+  _findTodo(todoListId, todoId) {
+    let todoList = this._findTodoList(todoListId);
+    if (!todoList) return undefined;
+
+    return todoList.todos.find(todo => todo.id === todoId);
+  }
+
+  toggleDoneTodo(todoListId, todoId) {
+    let todo = this._findTodo(todoListId, todoId);
+    if (!todo) return false;
+
+    todo.done = !todo.done;
+    return true;
   }
 };

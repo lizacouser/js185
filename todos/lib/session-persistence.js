@@ -2,6 +2,7 @@ const SeedData = require("./seed-data");
 const deepCopy = require("./deep-copy");
 const { sortTodoLists, sortTodos } = require("./sort");
 const nextId = require("./next-id");
+const req = require("express/lib/request");
 
 module.exports = class SessionPersistence {
   constructor(session) {
@@ -122,6 +123,15 @@ module.exports = class SessionPersistence {
     if (!todoList) return false;
 
     todoList.title = todoListTitle;
+    return true;
+  }
+
+  createTodoList(todoListTitle) {
+    this._todoLists.push({
+      id: nextId(),
+      title: todoListTitle,
+      todos: []
+    });
     return true;
   }
 };

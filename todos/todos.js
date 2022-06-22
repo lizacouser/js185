@@ -3,7 +3,6 @@ const morgan = require("morgan");
 const flash = require("express-flash");
 const session = require("express-session");
 const { body, validationResult } = require("express-validator");
-const TodoList = require("./lib/todolist");
 const store = require("connect-loki");
 const SessionPersistence = require("./lib/session-persistence");
 
@@ -68,6 +67,49 @@ app.get("/lists", (req, res) => {
   });
 });
 
+// Render new todo list page
+app.get("/lists/new", (req, res) => {
+  res.render("new-list");
+});
+
+// Create a new todo list
+app.post("/lists",
+  [
+    body("todoListTitle")
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("The list title is required.")
+      .isLength({ max: 100 })
+      .withMessage("List title must be between 1 and 100 characters.")
+  ],
+  (req, res) => {
+    let todoListTitle = req.body.todoListTitle;
+    const rerenderNewList = () => {
+      res.render("new-list", {
+        flash: req.flash(),
+        todoListTitle,
+      });
+    }
+
+    let errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      errors.array().forEach(message => req.flash("error", message.msg));
+      rerenderNewList();
+    } else if (res.locals.store.existsTodoListTitle(todoListTitle)) {
+      req.flash("error", "List title must be unqiue.");
+      rerenderNewList();
+    } else {
+      let created = res.locals.store.createTodoList(todoListTitle);
+      if (!created) {
+        next(new Error('Failed to create todo list.'))
+      } else {
+        req.flash("success", "The todo list has been created.");
+        res.redirect("/lists");
+      }
+    }
+  }
+);
+
 // Render individual todo list and its todos
 app.get("/lists/:todoListId", (req, res, next) => {
   let todoListId = req.params.todoListId;
@@ -85,43 +127,6 @@ app.get("/lists/:todoListId", (req, res, next) => {
     });
   }
 });
-
-// Render new todo list page
-app.get("/lists/new", (req, res) => {
-  res.render("new-list");
-});
-
-// Create a new todo list
-app.post("/lists",
-  [
-    body("todoListTitle")
-      .trim()
-      .isLength({ min: 1 })
-      .withMessage("The list title is required.")
-      .isLength({ max: 100 })
-      .withMessage("List title must be between 1 and 100 characters.")
-      // .custom((title, { req }) => {
-      //   let todoLists = req.session.todoLists;
-      //   let duplicate = todoLists.find(list => list.title === title);
-      //   return duplicate === undefined;
-      // })
-      // .withMessage("List title must be unique."),
-  ],
-  (req, res) => {
-    let errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      errors.array().forEach(message => req.flash("error", message.msg));
-      res.render("new-list", {
-        flash: req.flash(),
-        todoListTitle: req.body.todoListTitle,
-      });
-    } else {
-      req.session.todoLists.push(new TodoList(req.body.todoListTitle));
-      req.flash("success", "The todo list has been created.");
-      res.redirect("/lists");
-    }
-  }
-);
 
 
 // Toggle completion status of a todo

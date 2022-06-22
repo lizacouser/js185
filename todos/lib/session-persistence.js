@@ -1,6 +1,7 @@
 const SeedData = require("./seed-data");
 const deepCopy = require("./deep-copy");
 const { sortTodoLists, sortTodos } = require("./sort");
+const nextId = require("./next-id");
 
 module.exports = class SessionPersistence {
   constructor(session) {
@@ -79,12 +80,36 @@ module.exports = class SessionPersistence {
     return true;
   }
 
+  deleteTodoList(todoListId) {
+    let index = this._todoLists.findIndex(todoList => todoList.id === todoListId);
+    if (index === -1) return false;
+
+    this._todoLists.splice(index, 1);
+    return true;
+  }
+
   completeAllTodos(todoListId) {
     let todoList = this._findTodoList(todoListId);
     if (!todoList) return false;
 
     todoList.todos.filter(todo => !todo.done)
                   .forEach(todo => todo.done = true);
+    return true;
+  }
+
+  createTodo(title) {
+    return {
+      id: nextId(),
+      title,
+      done: false,
+    }
+  }
+
+  addTodo(todoListId, title) {
+    let todoList = this._findTodoList(todoListId);
+    if (!todoList) return false;
+
+    todoList.todos.push(this.createTodo(title));
     return true;
   }
 };

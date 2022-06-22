@@ -112,4 +112,16 @@ module.exports = class SessionPersistence {
     todoList.todos.push(this.createTodo(title));
     return true;
   }
+
+  existsTodoListTitle(todoListTitle) {
+    return this._todoLists.some(todoList => todoList.title === todoListTitle);
+  }
+
+  setTodoListTitle(todoListId, todoListTitle) {
+    let todoList = this._findTodoList(todoListId);
+    if (!todoList) return false;
+
+    todoList.title = todoListTitle;
+    return true;
+  }
 };

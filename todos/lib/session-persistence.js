@@ -67,4 +67,24 @@ module.exports = class SessionPersistence {
     todo.done = !todo.done;
     return true;
   }
+
+  deleteTodo(todoListId, todoId) {
+    let todoList = this._findTodoList(todoListId);
+    if (!todoList) return false;
+
+    let index = todoList.todos.findIndex(todo => todo.id === todoId);
+    if (index === -1) return false;
+
+    todoList.todos.splice(index, 1);
+    return true;
+  }
+
+  completeAllTodos(todoListId) {
+    let todoList = this._findTodoList(todoListId);
+    if (!todoList) return false;
+
+    todoList.todos.filter(todo => !todo.done)
+                  .forEach(todo => todo.done = true);
+    return true;
+  }
 };

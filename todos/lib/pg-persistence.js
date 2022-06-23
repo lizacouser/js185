@@ -9,15 +9,15 @@ module.exports = class SessionPersistence {
     // session.todoLists = this._todoLists;
   }
 
-  // Mark all todos on the todo list as done. Returns `true` on success,
-  // `false` if the todo list doesn't exist. The todo list ID must be numeric.
-  completeAllTodos(todoListId) {
-    // let todoList = this._findTodoList(todoListId);
-    // if (!todoList) return false;
-    //
-    // todoList.todos.filter(todo => !todo.done)
-    //               .forEach(todo => (todo.done = true));
-    // return true;
+  // Mark all todos in the specified todo list as done. Returns a promise that
+  // resolves to `true` on success, `false` if the todo list doesn't exist. The
+  // todo list ID must be numeric.
+  async completeAllTodos(todoListId) {
+    const COMPLETE_ALL = 'UPDATE todos SET done = true WHERE todolist_id = $1 AND NOT done;'
+    
+    let completeAll = await dbQuery(COMPLETE_ALL, todoListId);
+
+    return completeAll.rowCount > 0;
   }
 
   // Create a new todo list with the specified title and add it to the list of
@@ -34,45 +34,30 @@ module.exports = class SessionPersistence {
   }
 
   // Create a new todo with the specified title and add it to the indicated todo
-  // list. Returns `true` on success, `false` on failure.
-  createTodo(todoListId, title) {
-    // let todoList = this._findTodoList(todoListId);
-    // if (!todoList) return false;
-    //
-    // todoList.todos.push({
-    //   title,
-    //   id: nextId(),
-    //   done: false,
-    // });
-    //
-    // return true;
+  // list. Returns a promise that resolves to `true` on success, `false` on
+  // failure.
+  async createTodo(todoListId, title) {
+    let ADD_TODO = 'INSERT INTO todos (title, todolist_id) VALUES ($1, $2);'
+
+    let addTodo = await dbQuery(ADD_TODO, title, todoListId);
+    return addTodo.rowCount === 1;
   }
 
-  // Delete a todo list from the list of todo lists. Returns `true` on success,
-  // `false` if the todo list doesn't exist. The ID argument must be numeric.
-  deleteTodoList(todoListId) {
-    // let todoListIndex = this._todoLists.findIndex(todoList => {
-    //   return todoList.id === todoListId;
-    // });
-    //
-    // if (todoListIndex === -1) return false;
-    //
-    // this._todoLists.splice(todoListIndex, 1);
-    // return true;
+  // Delete a todo list and all of its todos (handled by cascade). Returns a
+  // Promise that resolves to `true` on success, false if the todo list doesn't
+  // exist
+  async deleteTodoList(todoListId) {
+    const DELETE_TODOLIST = 'DELETE FROM todolists WHERE id = $1;'
+    let deleted = await dbQuery(DELETE_TODOLIST, todoListId);
+    return deleted.rowCount === 1;
   }
 
-  // Delete the specified todo from the specified todo list. Returns `true` on
-  // success, `false` if the todo or todo list doesn't exist. The id arguments
-  // must both be numeric.
-  deleteTodo(todoListId, todoId) {
-    // let todoList = this._findTodoList(todoListId);
-    // if (!todoList) return false;
-    //
-    // let todoIndex = todoList.todos.findIndex(todo => todo.id === todoId);
-    // if (todoIndex === -1) return false;
-    //
-    // todoList.todos.splice(todoIndex, 1);
-    // return true;
+  // Delete a todo from the specified todo list. Returns a promise that resolves
+  // to `true` on success, `false` on failure.
+  async deleteTodo(todoListId, todoId) {
+    const DELETE_TODO = 'DELETE FROM todos WHERE todolist_id = $1 AND id = $2;'
+    let deleted = await dbQuery(DELETE_TODO, todoListId, todoId);
+    return deleted.rowCount === 1;
   }
 
   // Does the todo list have any undone todos? Returns true if yes, false if no.
@@ -89,8 +74,11 @@ module.exports = class SessionPersistence {
 
   // Returns `true` if a todo list with the specified title exists in the list
   // of todo lists, `false` otherwise.
-  existsTodoListTitle(title) {
-    // return this._todoLists.some(todoList => todoList.title === title);
+  async existsTodoListTitle(title) {
+    const FIND_TODOLIST_TITLE = 'SELECT 1 FROM todolists WHERE title = $1;'
+    let result = await dbQuery(FIND_TODOLIST_TITLE, title);
+
+    return result.rowCount === 1;
   }
 
   // Returns a copy of the todo list with the indicated ID. Returns `undefined`
@@ -123,36 +111,18 @@ module.exports = class SessionPersistence {
 
   // Set a new title for the specified todo list. Returns `true` on success,
   // `false` if the todo list isn't found. The todo list ID must be numeric.
-  setTodoListTitle(todoListId, title) {
-    // let todoList = this._findTodoList(todoListId);
-    // if (!todoList) return false;
-    //
-    // todoList.title = title;
-    // return true;
+  async setTodoListTitle(todoListId, title) {
+    const UPDATE_TODOLIST_TITLE = 'UPDATE todolists SET title = $1 WHERE id = $2);'
+    let result = await dbQuery(UPDATE_TODOLIST_TITLE, title, todoListId);
+
+    return result.rowCount === 1;
   }
 
   _partitionTodoLists(todoLists) {
     let undone = todoLists.filter(todoList => !this.isDoneTodoList(todoList));
     let done = todoLists.filter(todoList => this.isDoneTodoList(todoList));
-    // console.log(undone, done);
     return [].concat(undone, done);
   }
-
-    // Returns a new list of todo lists partitioned by completion status.
-    // _partitionTodoLists(todoLists) {
-    //   let undone = [];
-    //   let done = [];
-  
-    //   todoLists.forEach(todoList => {
-    //     if (this.isDoneTodoList(todoList)) {
-    //       done.push(todoList);
-    //     } else {
-    //       undone.push(todoList);
-    //     }
-    //   });
-  
-    //   return undone.concat(done);
-    // }
 
   // Returns a promise that resolves to a sorted list of all the todo lists
   // together with their todos. The list is sorted by completion status and
@@ -194,20 +164,4 @@ module.exports = class SessionPersistence {
     let result = await dbQuery(TOGGLE_DONE, todoListId, todoId);
     return result.rowCount > 0;
   }
-
-  // Returns a reference to the todo list with the indicated ID. Returns
-  // `undefined`. if not found. Note that `todoListId` must be numeric.
-  // _findTodoList(todoListId) {
-  //   return this._todoLists.find(todoList => todoList.id === todoListId);
-  // }
-
-  // Returns a reference to the indicated todo in the indicated todo list.
-  // Returns `undefined` if either the todo list or the todo is not found. Note
-  // that both IDs must be numeric.
-  // _findTodo(todoListId, todoId) {
-  //   let todoList = this._findTodoList(todoListId);
-  //   if (!todoList) return undefined;
-  //
-  //   return todoList.todos.find(todo => todo.id === todoId);
-  // }
 };

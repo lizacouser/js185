@@ -109,17 +109,16 @@ module.exports = class SessionPersistence {
 
     todoList.todos = resultBoth[1].rows;
     return todoList;
-
-    // let todoList = this._findTodoList(todoListId);
-    // return deepCopy(todoList);
   }
 
   // Returns a copy of the indicated todo in the indicated todo list. Returns
   // `undefined` if either the todo list or the todo is not found. Note that
   // both IDs must be numeric.
-  loadTodo(todoListId, todoId) {
-    // let todo = this._findTodo(todoListId, todoId);
-    // return deepCopy(todo);
+  async loadTodo(todoListId, todoId) {
+    const FIND_TODO = "SELECT * FROM todos WHERE todolist_id = $1 AND id = $2";
+    let resultTodo = await dbQuery(FIND_TODO, todoListId, todoId);
+
+    return resultTodo.rows[0];
   }
 
   // Set a new title for the specified todo list. Returns `true` on success,
@@ -185,15 +184,15 @@ module.exports = class SessionPersistence {
     return todosResult.rows;
   }
 
-  // Toggle a todo between the done and not done state. Returns `true` on
-  // success, `false` if the todo or todo list doesn't exist. The id arguments
-  // must both be numeric.
-  toggleDoneTodo(todoListId, todoId) {
-    // let todo = this._findTodo(todoListId, todoId);
-    // if (!todo) return false;
-    //
-    // todo.done = !todo.done;
-    // return true;
+  // Toggle a todo between the done and not done state. Returns a promise that
+  // resolves to `true` on success, `false` if the todo list or todo doesn't
+  // exist. The id arguments must both be numeric.
+  async toggleDoneTodo(todoListId, todoId) {
+    const TOGGLE_DONE = "UPDATE todos SET done = NOT done" +
+                        "  WHERE todolist_id = $1 AND id = $2";
+
+    let result = await dbQuery(TOGGLE_DONE, todoListId, todoId);
+    return result.rowCount > 0;
   }
 
   // Returns a reference to the todo list with the indicated ID. Returns

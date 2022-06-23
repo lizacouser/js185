@@ -1,6 +1,6 @@
 INSERT INTO todolists (title) VALUES ('Work todos'), ('Home todos'), ('Additional todos'), ('social todos');
 
-INSERT INTO todos (title, done, todolist) VALUES
+INSERT INTO todos (title, done, todolist_id) VALUES
   ('Get coffee', true, 1),
   ('Chat with coworkers', true, 1),
   ('Duck out of meeting', false, 1),

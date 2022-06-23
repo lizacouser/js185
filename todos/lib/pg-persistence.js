@@ -77,14 +77,14 @@ module.exports = class SessionPersistence {
 
   // Does the todo list have any undone todos? Returns true if yes, false if no.
   hasUndoneTodos(todoList) {
-    // return todoList.todos.some(todo => !todo.done);
+    return todoList.todos.some(todo => !todo.done);
   }
 
   // Are all of the todos in the todo list done? If the todo list has at least
   // one todo and all of its todos are marked as done, then the todo list is
   // done. Otherwise, it is undone.
   isDoneTodoList(todoList) {
-    // return todoList.todos.length > 0 && todoList.todos.every(todo => todo.done);
+    return todoList.todos.length > 0 && todoList.todos.every(todo => todo.done);
   }
 
   // Returns `true` if a todo list with the specified title exists in the list
@@ -95,7 +95,21 @@ module.exports = class SessionPersistence {
 
   // Returns a copy of the todo list with the indicated ID. Returns `undefined`
   // if not found. Note that `todoListId` must be numeric.
-  loadTodoList(todoListId) {
+  async loadTodoList(todoListId) {
+    const FIND_TODOLIST = "SELECT * FROM todolists WHERE id = $1";
+    const FIND_TODOS = "SELECT * FROM todos WHERE todolist_id = $1";
+    
+    let resultTodoList = dbQuery(FIND_TODOLIST, todoListId);
+    let resultTodos = dbQuery(FIND_TODOS, todoListId);
+    let resultBoth = await Promise.all([resultTodoList, resultTodos]);
+    // Note that we're making two separate queries here. We could use await for each query, but that's wasteful; it's more efficient to make simultaneous queries instead of waiting for one to complete. Thus, we don't use await when making these queries. Instead, we use await Promise.all(...) to wait for all of the queries to settle. Promise.all creates a new Promise that settles when all of the Promises in the argument resolve.
+
+    let todoList = resultBoth[0].rows[0];
+    if (!todoList) return undefined;
+
+    todoList.todos = resultBoth[1].rows;
+    return todoList;
+
     // let todoList = this._findTodoList(todoListId);
     // return deepCopy(todoList);
   }
@@ -118,22 +132,57 @@ module.exports = class SessionPersistence {
     // return true;
   }
 
-  // Returns a copy of the list of todo lists sorted by completion status and
-  // title (case-insensitive).
-  sortedTodoLists() {
-    // let todoLists = deepCopy(this._todoLists);
-    // let undone = todoLists.filter(todoList => !this.isDoneTodoList(todoList));
-    // let done = todoLists.filter(todoList => this.isDoneTodoList(todoList));
-    // return sortTodoLists(undone, done);
+  _partitionTodoLists(todoLists) {
+    let undone = todoLists.filter(todoList => !this.isDoneTodoList(todoList));
+    let done = todoLists.filter(todoList => this.isDoneTodoList(todoList));
+    // console.log(undone, done);
+    return [].concat(undone, done);
+  }
+
+    // Returns a new list of todo lists partitioned by completion status.
+    // _partitionTodoLists(todoLists) {
+    //   let undone = [];
+    //   let done = [];
+  
+    //   todoLists.forEach(todoList => {
+    //     if (this.isDoneTodoList(todoList)) {
+    //       done.push(todoList);
+    //     } else {
+    //       undone.push(todoList);
+    //     }
+    //   });
+  
+    //   return undone.concat(done);
+    // }
+
+  // Returns a promise that resolves to a sorted list of all the todo lists
+  // together with their todos. The list is sorted by completion status and
+  // title (case-insensitive). The todos in the list are unsorted.
+  async sortedTodoLists() {
+    const ALL_TODOLISTS = "SELECT * FROM todolists ORDER BY lower(title) ASC";
+    const FIND_TODOS = "SELECT * FROM todos WHERE todolist_id = $1";
+
+    let result = await dbQuery(ALL_TODOLISTS);
+    let todoLists = result.rows;
+
+    for (let index = 0; index < todoLists.length; ++index) {
+      let todoList = todoLists[index];
+      let todos = await dbQuery(FIND_TODOS, todoList.id);
+      todoList.todos = todos.rows;
+    }
+
+    return this._partitionTodoLists(todoLists);
   }
 
   // Returns a copy of the list of todos in the indicated todo list by sorted by
   // completion status and title (case-insensitive).
-  sortedTodos(todoList) {
-    // let todos = todoList.todos;
-    // let undone = todos.filter(todo => !todo.done);
-    // let done = todos.filter(todo => todo.done);
-    // return deepCopy(sortTodos(undone, done));
+  async sortedTodos(todoList) {
+    const SORTED_TODOS = "SELECT * FROM todos " + 
+                         "WHERE todolist_id = $1 " + 
+                         "ORDER BY done ASC, lower(title) ASC";
+
+    let todosResult = await dbQuery(SORTED_TODOS, todoList.id);
+    return todosResult.rows;
   }
 
   // Toggle a todo between the done and not done state. Returns `true` on

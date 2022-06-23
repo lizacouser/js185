@@ -4,8 +4,8 @@ const flash = require("express-flash");
 const session = require("express-session");
 const { body, validationResult } = require("express-validator");
 const store = require("connect-loki");
-// const SessionPersistence = require("./lib/session-persistence");
 const PgPersistence = require("./lib/pg-persistence");
+const catchError = require("./lib/catch-error");
 
 const app = express();
 const host = "localhost";
@@ -53,25 +53,22 @@ app.get("/", (req, res) => {
 });
 
 // Render the list of todo lists
-app.get("/lists", async (req, res, next) => {
-  try {
+app.get("/lists", 
+  catchError(async (req, res) => {
     let store = res.locals.store;
     let todoLists = await store.sortedTodoLists();
-  
     let todosInfo = todoLists.map(todoList => ({
       countAllTodos: todoList.todos.length,
       countDoneTodos: todoList.todos.filter(todo => todo.done).length,
       isDone: store.isDoneTodoList(todoList),
     }));
-    
+
     res.render("lists", {
-      todoLists, todosInfo,
+      todoLists,
+      todosInfo,
     });
-  } catch (error) {
-      next(error);
-  }
-  
-});
+  })
+);
 
 // Render new todo list page
 app.get("/lists/new", (req, res) => {
@@ -117,28 +114,21 @@ app.post("/lists",
 );
 
 // Render individual todo list and its todos
-app.get("/lists/:todoListId", async (req, res, next) => {
-  try {
+app.get("/lists/:todoListId",
+  catchError(async (req, res) => {
     let todoListId = req.params.todoListId;
     let todoList = await res.locals.store.loadTodoList(+todoListId);
-    
-    if (todoList === undefined) {
-      next(new Error("Not found."));
-    } else {
-      todoList.todos = await res.locals.store.sortedTodos(todoList);
-  
-      res.render("list", {
-        todoList,
-        hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),
-        isDoneTodoList: res.locals.store.isDoneTodoList(todoList),
-      });
-    }
-  } catch (error) {
-    next(error);
-  }
-  
-});
+    if (todoList === undefined) throw new Error("Not found."); // Note that we replaced the next(new Error(...)) in the last snippet with throw new Error(...)
 
+    todoList.todos = await res.locals.store.sortedTodos(todoList);
+
+    res.render("list", {
+      todoList,
+      isDoneTodoList: res.locals.store.isDoneTodoList(todoList),
+      hasUndoneTodos: res.locals.store.hasUndoneTodos(todoList),
+    });
+  })
+);
 
 // Toggle completion status of a todo
 app.post("/lists/:todoListId/todos/:todoId/toggle", (req, res, next) => {

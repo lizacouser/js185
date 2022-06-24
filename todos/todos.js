@@ -5,6 +5,7 @@ const session = require("express-session");
 const { body, validationResult } = require("express-validator");
 const store = require("connect-loki");
 const PgPersistence = require("./lib/pg-persistence");
+const SessionPersistence = require("./lib/session-persistence");
 const catchError = require("./lib/catch-error");
 
 const app = express();
@@ -36,7 +37,8 @@ app.use(flash());
 
 // Create a new datastore
 app.use((req,res, next) => {
-  res.locals.store = new PgPersistence(req.session);
+  // res.locals.store = new PgPersistence(req.session);
+  res.locals.store = new SessionPersistence(req.session);
   next();
 })
 
@@ -85,7 +87,7 @@ app.post("/lists",
       .isLength({ max: 100 })
       .withMessage("List title must be between 1 and 100 characters.")
   ],
-  (req, res) => {
+  catchError(async (req, res) => {
     let todoListTitle = req.body.todoListTitle;
     const rerenderNewList = () => {
       res.render("new-list", {
@@ -98,19 +100,20 @@ app.post("/lists",
     if (!errors.isEmpty()) {
       errors.array().forEach(message => req.flash("error", message.msg));
       rerenderNewList();
-    } else if (res.locals.store.existsTodoListTitle(todoListTitle)) {
+    } else if (await res.locals.store.existsTodoListTitle(todoListTitle)) {
       req.flash("error", "List title must be unqiue.");
       rerenderNewList();
     } else {
-      let created = res.locals.store.createTodoList(todoListTitle);
+      let created = await res.locals.store.createTodoList(todoListTitle);
       if (!created) {
-        next(new Error('Failed to create todo list.'))
+        req.flash("error", "The list title must be unique.");
+        rerenderNewList();
       } else {
         req.flash("success", "The todo list has been created.");
         res.redirect("/lists");
       }
     }
-  }
+  })
 );
 
 // Render individual todo list and its todos
@@ -242,34 +245,43 @@ app.post("/lists/:todoListId/edit",
       .withMessage("List title must be between 1 and 100 characters.")
   ],
   catchError(async (req, res) => {
+    let store = res.locals.store;
     let todoListId = req.params.todoListId;
     let todoListTitle = req.body.todoListTitle;
 
-    const rerenderEditList = () => {
-      let todoList = await res.locals.store.loadTodoList(+todoListId);
+    const rerenderEditList = async () => {
+      let todoList = await store.loadTodoList(+todoListId);
       if (!todoList) throw new Error("Not found.");
 
       res.render("edit-list", {
-        flash: req.flash(),
         todoListTitle,
         todoList,
+        flash: req.flash(),
       });
-      
-    }
-    
-    let errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      errors.array().forEach(message => req.flash("error", message.msg));
-      rerenderEditList();
-    } else if (await res.locals.store.existsTodoListTitle(todoListTitle)) {
-      req.flash("error", "List title must be unique.");
-      rerenderEditList();
-    } else if (!await res.locals.store.setTodoListTitle(+todoListId,
-      todoListTitle)) {
-        throw new Error("Not found.");
-    } else {
-      req.flash("success", "Todo list updated.");
-      res.redirect(`/lists/${todoListId}`);
+    };
+
+    try {
+      let errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        errors.array().forEach(message => req.flash("error", message.msg));
+        rerenderEditList();
+      } else if (await store.existsTodoListTitle(todoListTitle)) {
+        req.flash("error", "The list title must be unique.");
+        rerenderEditList();
+      } else {
+        let updated = await store.setTodoListTitle(+todoListId, todoListTitle);
+        if (!updated) throw new Error("Not found.");
+
+        req.flash("success", "Todo list updated.");
+        res.redirect(`/lists/${todoListId}`);
+      }
+    } catch (error) {
+      if (store.isUniqueConstraintViolation(error)) {
+        req.flash("error", "The list title must be unique.");
+        rerenderEditList();
+      } else {
+        throw error;
+      }
     }
   })
 );

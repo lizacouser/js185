@@ -98,19 +98,16 @@ module.exports = class SessionPersistence {
     return true;
   }
 
-  createTodo(title) {
-    return {
-      id: nextId(),
-      title,
-      done: false,
-    }
-  }
-
-  addTodo(todoListId, title) {
+  createTodo(todoListId, title) {
     let todoList = this._findTodoList(todoListId);
     if (!todoList) return false;
 
-    todoList.todos.push(this.createTodo(title));
+    todoList.todos.push({
+      id: nextId(),
+      title,
+      done: false,
+    });
+
     return true;
   }
 
@@ -125,6 +122,13 @@ module.exports = class SessionPersistence {
     todoList.title = todoListTitle;
     return true;
   }
+
+  // Returns `true` if `error` seems to indicate a `UNIQUE` constraint
+  // violation, `false` otherwise.
+  isUniqueConstraintViolation(_error) {
+    return false;
+  }
+
 
   createTodoList(todoListTitle) {
     this._todoLists.push({

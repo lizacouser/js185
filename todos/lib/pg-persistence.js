@@ -1,36 +1,29 @@
-const req = require('express/lib/request');
-const { Client } = require('pg');
 const { dbQuery } = require('./db-query');
 
 module.exports = class SessionPersistence {
-  
-  constructor(session) {
-    // this._todoLists = session.todoLists || deepCopy(SeedData);
-    // session.todoLists = this._todoLists;
-  }
 
   // Mark all todos in the specified todo list as done. Returns a promise that
   // resolves to `true` on success, `false` if the todo list doesn't exist. The
   // todo list ID must be numeric.
   async completeAllTodos(todoListId) {
     const COMPLETE_ALL = 'UPDATE todos SET done = true WHERE todolist_id = $1 AND NOT done;'
-    
     let completeAll = await dbQuery(COMPLETE_ALL, todoListId);
-
     return completeAll.rowCount > 0;
   }
 
   // Create a new todo list with the specified title and add it to the list of
   // todo lists. Returns `true` on success, `false` on failure. (At this time,
   // there are no known failure conditions.)
-  createTodoList(title) {
-    // this._todoLists.push({
-    //   title,
-    //   id: nextId(),
-    //   todos: [],
-    // });
-    //
-    // return true;
+  async createTodoList(title) {
+    let ADD_TODOLIST = 'INSERT INTO todolists (title) VALUES ($1);'
+
+    try {
+      let addTodoList = await dbQuery(ADD_TODOLIST, title);
+      return addTodoList.rowCount === 1;
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) return false;
+      throw error;
+    }
   }
 
   // Create a new todo with the specified title and add it to the indicated todo
@@ -38,7 +31,6 @@ module.exports = class SessionPersistence {
   // failure.
   async createTodo(todoListId, title) {
     let ADD_TODO = 'INSERT INTO todos (title, todolist_id) VALUES ($1, $2);'
-
     let addTodo = await dbQuery(ADD_TODO, title, todoListId);
     return addTodo.rowCount === 1;
   }
@@ -72,13 +64,19 @@ module.exports = class SessionPersistence {
     return todoList.todos.length > 0 && todoList.todos.every(todo => todo.done);
   }
 
-  // Returns `true` if a todo list with the specified title exists in the list
-  // of todo lists, `false` otherwise.
+  // Returns a Promise that resolves to `true` if a todo list with the specified
+  // title exists in the list of todo lists, `false` otherwise.
   async existsTodoListTitle(title) {
     const FIND_TODOLIST_TITLE = 'SELECT 1 FROM todolists WHERE title = $1;'
     let result = await dbQuery(FIND_TODOLIST_TITLE, title);
-
     return result.rowCount === 1;
+  }
+
+
+  // Returns `true` if `error` seems to indicate a `UNIQUE` constraint
+  // violation, `false` otherwise.
+  isUniqueConstraintViolation(error) {
+    return /duplicate key value violates unique constraint/.test(String(error));
   }
 
   // Returns a copy of the todo list with the indicated ID. Returns `undefined`
@@ -105,16 +103,14 @@ module.exports = class SessionPersistence {
   async loadTodo(todoListId, todoId) {
     const FIND_TODO = "SELECT * FROM todos WHERE todolist_id = $1 AND id = $2";
     let resultTodo = await dbQuery(FIND_TODO, todoListId, todoId);
-
     return resultTodo.rows[0];
   }
 
-  // Set a new title for the specified todo list. Returns `true` on success,
-  // `false` if the todo list isn't found. The todo list ID must be numeric.
+  // Set a new title for the specified todo list. Returns a promise that
+  // resolves to `true` on success, `false` if the todo list wasn't found.
   async setTodoListTitle(todoListId, title) {
-    const UPDATE_TODOLIST_TITLE = 'UPDATE todolists SET title = $1 WHERE id = $2);'
+    const UPDATE_TODOLIST_TITLE = 'UPDATE todolists SET title = $1 WHERE id = $2;'
     let result = await dbQuery(UPDATE_TODOLIST_TITLE, title, todoListId);
-
     return result.rowCount === 1;
   }
 

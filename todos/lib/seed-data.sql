@@ -1,11 +1,15 @@
-INSERT INTO todolists (title) VALUES ('Work todos'), ('Home todos'), ('Additional todos'), ('social todos');
+INSERT INTO todolists (id, title, username)
+  VALUES (1, 'Work Todos', 'admin'),
+         (2, 'Home Todos', 'admin'),
+         (3, 'Additional Todos', 'admin'),
+         (4, 'social todos', 'admin');
 
-INSERT INTO todos (title, done, todolist_id) VALUES
-  ('Get coffee', true, 1),
-  ('Chat with coworkers', true, 1),
-  ('Duck out of meeting', false, 1),
-  ('Feed the cats', true, 2),
-  ('Go to bed', true, 2),
-  ('Buy milk', true, 2),
-  ('Study for launch school', true, 2),
-  ('Go to Libby''s birthday party', false, 4);
+INSERT INTO todos (title, done, todolist_id, username)
+  VALUES ('Get coffee', TRUE, 1, 'admin'),
+         ('Chat with co-workers', TRUE, 1, 'admin'),
+         ('Duck out of meeting', FALSE, 1, 'admin'),
+         ('Feed the cats', TRUE, 2, 'admin'),
+         ('Go to bed', TRUE, 2, 'admin'),
+         ('Buy milk', TRUE, 2, 'admin'),
+         ('Study for Launch School', TRUE, 2, 'admin'),
+         ('Go to Libby''s birthday party', FALSE, 4, 'admin');

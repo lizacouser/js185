@@ -1,4 +1,5 @@
 const { dbQuery } = require('./db-query');
+const bcrypt = require("bcrypt");
 
 module.exports = class SessionPersistence {
 
@@ -42,6 +43,16 @@ module.exports = class SessionPersistence {
     const DELETE_TODOLIST = 'DELETE FROM todolists WHERE id = $1;'
     let deleted = await dbQuery(DELETE_TODOLIST, todoListId);
     return deleted.rowCount === 1;
+  }
+  
+  // Returns a Promise that resolves to `true` if `username` and `password`
+  // combine to identify a legitimate application user, `false` if either the
+  // `username` or `password` is invalid.
+  async validCredentials(username, password) {
+    const FIND_HASHED_PASSWORD = "SELECT password FROM users WHERE username = $1"
+    let hashedPassword = await dbQuery(FIND_HASHED_PASSWORD, username);
+    if (hashedPassword.rowCount === 0) return false;
+    return bcrypt.compare(password, hashedPassword.rows[0].password);
   }
 
   // Delete a todo from the specified todo list. Returns a promise that resolves

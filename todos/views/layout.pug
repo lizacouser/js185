@@ -24,3 +24,19 @@ html(lang="en-US")
               li.flash(class=kind)= message
 
       block main
+
+    footer
+      block signin
+        - if (!signedIn)
+          p You are not signed in.
+          form(action="/users/signin" method="get")
+            input(type="submit" value="Sign In")
+        - else
+          p You are signed in as #{username}.
+          form(action="/users/signout" method="post")
+            input(type="submit" value="Sign Out")
+
+//- something about not being signed in if not signed in
+//- sign in button links to new form
+//- something about 'signed in as ____' if signed in
+//- sign out button and redirected to sign in page

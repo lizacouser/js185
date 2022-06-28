@@ -12,3 +12,7 @@ CREATE TABLE todos (
     ON DELETE CASCADE
 );
 
+CREATE TABLE users (
+  username text PRIMARY KEY,
+  password text NOT NULL
+);

@@ -129,18 +129,23 @@ module.exports = class PgPersistence {
   // title (case-insensitive). The todos in the list are unsorted.
   async sortedTodoLists() {
     const ALL_TODOLISTS = "SELECT * FROM todolists WHERE username = $1 ORDER BY lower(title) ASC";
-    const FIND_TODOS = "SELECT * FROM todos WHERE todolist_id = $1 AND username = $2";
+    const FIND_TODOS = "SELECT * FROM todos WHERE username = $1";
 
-    let result = await dbQuery(ALL_TODOLISTS, this.username);
-    let todoLists = result.rows;
+    let resultTodoLists = dbQuery(ALL_TODOLISTS, this.username);
+    let resultTodos =  dbQuery(FIND_TODOS, this.username)
+    let resultBoth = await Promise.all([resultTodoLists, resultTodos]);
+    let allTodoLists = resultBoth[0].rows;
+    let allTodos = resultBoth[1].rows;
 
-    for (let index = 0; index < todoLists.length; ++index) {
-      let todoList = todoLists[index];
-      let todos = await dbQuery(FIND_TODOS, todoList.id, this.username);
-      todoList.todos = todos.rows;
-    }
+    if (!allTodoLists || !allTodos) return undefined;
 
-    return this._partitionTodoLists(todoLists);
+    allTodoLists.forEach(todoList => {
+      todoList.todos = allTodos.filter(todo => {
+        return todoList.id === todo.todolist_id;
+      });
+    });
+
+    return this._partitionTodoLists(allTodoLists);
   }
 
   // Returns a copy of the list of todos in the indicated todo list by sorted by
